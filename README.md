@@ -1,4 +1,4 @@
-# :credit_card: Repay Plugin for Flutter
+# :credit_card: Rexpay Plugin for Flutter
 
 
 <p>
