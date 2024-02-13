@@ -1,6 +1,12 @@
 # :credit_card: Repay Plugin for Flutter
 
 
+<p>
+    <img src="https://github.com/accelerex-developer/RexPayFlutter/blob/master/screenshots/landing.png" width="200px" height="auto" hspace="20"/>
+    <img src="https://github.com/accelerex-developer/RexPayFlutter/blob/master/screenshots/card.png" width="200px" height="auto" hspace="20"/>
+     <img src="https://github.com/accelerex-developer/RexPayFlutter/blob/master/screenshots/bank.png" width="200px" height="auto" hspace="20"/>
+</p>
+
 
 A Flutter plugin for making payments via RexPay Payment Gateway. Fully
 supports Android and iOS
