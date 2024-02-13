@@ -8,6 +8,7 @@ import 'package:rexpay/src/core/api/service/contracts/cards_service_contract.dar
 import 'package:rexpay/src/core/common/exceptions.dart';
 import 'package:rexpay/src/core/common/my_strings.dart';
 import 'package:rexpay/src/core/common/rexpay.dart';
+import 'package:rexpay/src/models/auth_keys.dart';
 import 'package:rexpay/src/models/charge.dart';
 import 'package:rexpay/src/models/checkout_response.dart';
 import 'package:rexpay/src/transaction/base_transaction_manager.dart';
@@ -18,42 +19,22 @@ class CardTransactionManager extends BaseTransactionManager {
   final CardServiceContract service;
   var _invalidDataSentRetries = 0;
 
-  CardTransactionManager(
-      {required Charge charge,
-      required this.service,
-      required BuildContext context,
-      required String publicKey})
-      : assert(charge.card != null,
-            'please add a card to the charge before ' 'calling chargeCard'),
-        super(charge: charge, context: context, publicKey: publicKey);
+  CardTransactionManager({
+    required Charge charge,
+    required this.service,
+    required BuildContext context,
+    required AuthKeys authKeys,
+  })  : assert(charge.card != null, 'please add a card to the charge before ' 'calling chargeCard'),
+        super(
+          charge: charge,
+          context: context,
+          authKeys: authKeys,
+        );
 
   @override
-  postInitiate() async {
-    chargeRequestBody =
-        await CardRequestBody.getChargeRequestBody(publicKey, charge);
+  postInitiate() {
+    chargeRequestBody = CardRequestBody(charge, authKeys);
     validateRequestBody = ValidateRequestBody();
-  }
-
-  Future<CheckoutResponse> chargeCard() async {
-    try {
-      if (charge.card == null || !charge.card!.isValid()) {
-        return getCardInfoFrmUI(charge.card);
-      } else {
-        await initiate();
-        return sendCharge();
-      }
-    } catch (e) {
-      if (!(e is ProcessingException)) {
-        setProcessingOff();
-      }
-      return CheckoutResponse(
-          message: e.toString(),
-          reference: transaction.reference,
-          status: false,
-          card: charge.card?..nullifyNumber(),
-          method: CheckoutMethod.card,
-          verify: !(e is RexpayException));
-    }
   }
 
   Future<CheckoutResponse> _validate() async {
@@ -64,36 +45,20 @@ class CardTransactionManager extends BaseTransactionManager {
     }
   }
 
-  Future<CheckoutResponse> _reQuery() async {
-    try {
-      return _reQueryChargeOnServer();
-    } catch (e) {
-      return notifyProcessingError(e);
-    }
-  }
-
   Future<CheckoutResponse> _validateChargeOnServer() {
-    Map<String, String?> params = validateRequestBody.paramsMap();
-    Future<TransactionApiResponse> future = service.validateCharge(params);
-    return handleServerResponse(future);
-  }
-
-  Future<CheckoutResponse> _reQueryChargeOnServer() {
-    Future<TransactionApiResponse> future =
-        service.reQueryTransaction(transaction.id);
+    Future<TransactionApiResponse> future = service.authorizeCharge(chargeRequestBody, authKeys);
     return handleServerResponse(future);
   }
 
   @override
   Future<CheckoutResponse> sendChargeOnServer() {
-    Future<TransactionApiResponse> future =
-        service.chargeCard(chargeRequestBody.paramsMap());
+    
+    Future<TransactionApiResponse> future = service.chargeCard(chargeRequestBody, authKeys);
     return handleServerResponse(future);
   }
 
   @override
-  Future<CheckoutResponse> handleApiResponse(
-      TransactionApiResponse apiResponse) async {
+  Future<CheckoutResponse> handleApiResponse(TransactionApiResponse apiResponse) async {
     var status = apiResponse.status;
     if (status == '1' || status == 'success') {
       setProcessingOff();
@@ -104,67 +69,14 @@ class CardTransactionManager extends BaseTransactionManager {
       return getPinFrmUI();
     }
 
-    if (status == '3' && apiResponse.hasValidReferenceAndTrans()) {
-      validateRequestBody.trans = apiResponse.trans;
-      return getOtpFrmUI(message: apiResponse.message);
-    }
-
-    if (transaction.hasStartedOnServer()) {
-      if (status == 'requery') {
-        await Future.delayed(const Duration(seconds: 5));
-        return _reQuery();
-      }
-
-      if (apiResponse.hasValidAuth() &&
-          apiResponse.auth!.toLowerCase() == '3DS'.toLowerCase() &&
-          apiResponse.hasValidUrl()) {
-        return getAuthFrmUI(apiResponse.otpMessage);
-      }
-
-      if (apiResponse.hasValidAuth() &&
-          (apiResponse.auth!.toLowerCase() == 'otp' ||
-              apiResponse.auth!.toLowerCase() == 'phone') &&
-          apiResponse.hasValidOtpMessage()) {
-        validateRequestBody.trans = transaction.id;
-        return getOtpFrmUI(message: apiResponse.otpMessage);
-      }
-    }
-
-    if (status == '0'.toLowerCase() || status == 'error') {
-      if (apiResponse.message!.toLowerCase() ==
-              'Invalid Data Sent'.toLowerCase() &&
-          _invalidDataSentRetries < 0) {
-        _invalidDataSentRetries++;
-        return chargeCard();
-      }
-
-      if (apiResponse.message!.toLowerCase() ==
-          'Access code has expired'.toLowerCase()) {
-        return sendCharge();
-      }
-
-      return notifyProcessingError(ChargeException(apiResponse.message));
-    }
-
     return notifyProcessingError(RexpayException(Strings.unKnownResponse));
   }
 
-  @override
-  Future<CheckoutResponse> handleCardInput() {
-    return chargeCard();
-  }
 
   @override
-  Future<CheckoutResponse> handleOtpInput(
-      String otp, TransactionApiResponse? response) {
+  Future<CheckoutResponse> handleOtpInput(String otp, TransactionApiResponse? response) {
     validateRequestBody.token = otp;
     return _validate();
-  }
-
-  @override
-  Future<CheckoutResponse> handlePinInput(String pin) async {
-    await chargeRequestBody.addPin(pin);
-    return sendCharge();
   }
 
   @override

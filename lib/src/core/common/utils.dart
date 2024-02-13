@@ -6,7 +6,7 @@ class Utils {
 
   static String getKeyErrorMsg(String keyType) {
     return 'Invalid $keyType key. You must use a valid $keyType key. Ensure that you '
-        'have set a $keyType key. Check http://paystack.co for more';
+        'have set a $keyType key.';
   }
 
   static NumberFormat? _currencyFormatter;

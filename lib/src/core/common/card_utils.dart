@@ -82,7 +82,7 @@ class CardUtils {
     if (text == null) {
       return '';
     }
-    RegExp regExp = new RegExp(r"[^0-9]");
+    RegExp regExp = RegExp(r"[^0-9]");
     return text.replaceAll(regExp, '');
   }
 

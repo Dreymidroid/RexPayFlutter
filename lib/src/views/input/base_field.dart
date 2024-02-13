@@ -11,6 +11,7 @@ class BaseTextField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final TextEditingController? controller;
   final String? initialValue;
+  final bool obscureText;
 
   BaseTextField({
     Key? key,
@@ -22,6 +23,7 @@ class BaseTextField extends StatelessWidget {
     this.validator,
     this.controller,
     this.initialValue,
+    this.obscureText = false,
   }) : super(key: key);
 
   @override
@@ -34,6 +36,7 @@ class BaseTextField extends StatelessWidget {
       maxLines: 1,
       initialValue: initialValue,
       keyboardType: TextInputType.number,
+      obscureText: obscureText,
       decoration: new InputDecoration(
         border: OutlineInputBorder(),
         labelText: labelText,

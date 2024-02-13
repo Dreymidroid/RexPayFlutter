@@ -2,9 +2,15 @@ import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:flutter/material.dart';
+import 'package:rexpay/rexpay.dart';
+import 'package:rexpay/src/core/api/model/transaction_api_response.dart';
+import 'package:rexpay/src/core/api/request/ussd_request_body.dart';
 import 'package:rexpay/src/core/api/service/bank_service.dart';
 import 'package:rexpay/src/core/api/service/contracts/banks_service_contract.dart';
+import 'package:rexpay/src/core/api/service/contracts/ussd_services_contract.dart';
+import 'package:rexpay/src/core/api/service/custom_exception.dart';
 import 'package:rexpay/src/core/common/rexpay.dart';
+import 'package:rexpay/src/core/constants/colors.dart';
 import 'package:rexpay/src/models/bank.dart';
 import 'package:rexpay/src/models/charge.dart';
 import 'package:rexpay/src/models/checkout_response.dart';
@@ -19,15 +25,15 @@ class USSDCheckout extends StatefulWidget {
   final Charge charge;
   final OnResponse<CheckoutResponse> onResponse;
   final ValueChanged<bool> onProcessingChange;
-  final BankServiceContract service;
-  final String publicKey;
+  final USSDServiceContract service;
+  final AuthKeys authKeys;
 
   USSDCheckout({
     required this.charge,
     required this.onResponse,
     required this.onProcessingChange,
     required this.service,
-    required this.publicKey,
+    required this.authKeys,
   });
 
   @override
@@ -40,15 +46,36 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
   late Animation<double> _animation;
   var _autoValidate = AutovalidateMode.disabled;
   late Future<List<Bank>?>? _futureBanks;
+  late USSDChargeRequestBody _ussdChargeRequestBody;
+  bool _isLoadingUSSDDetails = false;
+  bool _isUSSDGenerated = false;
   Bank? _currentBank;
-  BankAccount? _account;
+  String _ussdCode = "";
   var _loading = false;
+  String error = "";
+  List<Bank> banks = [
+    Bank("ACCESS BANK", 0, "044", "Access Bank"),
+    Bank("ECOBANK NIGERIA", 0, "050", "Ecobank"),
+    Bank("FIDELITY BANK", 0, "070", "Fidelity Bank"),
+    Bank("FIRST BANK OF NIGERIA", 0, "011", "First Bank"),
+    Bank("FIRST CITY MONUMENT BANK", 0, "214", "FCMB"),
+    Bank("GUARANTY TRUST BANK", 0, "058", "GTBank"),
+    Bank("KEYSTONE BANK", 0, "082", "Keystone Bank"),
+    Bank("Rubies (Highstreet)", 0, "7797", "Rubies Bank"),
+    Bank("STANBIC IBTC BANK", 0, "221", "Stanbic IBTC"),
+    Bank("STERLING BANK", 0, "232", "Sterling Bank"),
+    Bank("UNITED BANK FOR AFRICA", 0, "033", "UBA"),
+    Bank("UNITY BANK", 0, "215", "Unity Bank"),
+    Bank("VFD", 0, "322", "VFD"),
+    Bank("WEMA BANK", 0, "035", "Wema Bank"),
+    Bank("ZENITH BANK", 0, "057", "Zenith Bank"),
+  ];
 
   _USSDCheckoutState(OnResponse<CheckoutResponse> onResponse) : super(onResponse, CheckoutMethod.bank);
 
   @override
   void initState() {
-    _futureBanks = widget.service.fetchSupportedBanks();
+    _ussdChargeRequestBody = USSDChargeRequestBody(widget.charge);
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _animation = Tween(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(
@@ -68,40 +95,10 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
 
   @override
   Widget buildAnimatedChild() {
-    return Container(
-      alignment: Alignment.center,
-      child: FutureBuilder<List<Bank>?>(
-        future: _futureBanks,
-        builder: (BuildContext context, AsyncSnapshot snapshot) {
-          Widget widget;
-          switch (snapshot.connectionState) {
-            case ConnectionState.waiting:
-              widget = Center(
-                child: Container(
-                  width: 50.0,
-                  height: 50.0,
-                  margin: const EdgeInsets.symmetric(vertical: 30.0),
-                  child: const CircularProgressIndicator(
-                    strokeWidth: 3.0,
-                  ),
-                ),
-              );
-              break;
-            case ConnectionState.done:
-              widget = snapshot.hasData ? _getCompleteUI(snapshot.data) : retryButton();
-              break;
-            default:
-              widget = retryButton();
-              break;
-          }
-          return widget;
-        },
-      ),
-    );
+    return _initialUI();
   }
 
-  Widget _getCompleteUI(List<Bank> banks) {
-    var container = Container();
+  Widget _initialUI() {
     return Container(
       child: Form(
         autovalidateMode: _autoValidate,
@@ -112,20 +109,26 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
             const SizedBox(
               height: 10.0,
             ),
-            _currentBank == null
-                ? const Icon(
-                    Icons.account_balance,
-                    size: 35.0,
-                  )
-                : container,
-            _currentBank == null
-                ? const SizedBox(
-                    height: 20.0,
-                  )
-                : container,
-            Text(
-              _currentBank == null ? 'Choose your bank to start the payment' : 'Enter your acccount number',
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.0),
+            if (error != "")
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                margin: const EdgeInsets.only(bottom: 30),
+                decoration: BoxDecoration(color: AppColors.red.withOpacity(0.1)),
+                child: Center(
+                  child: Text(
+                    error,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14.0,
+                      color: AppColors.red,
+                    ),
+                  ),
+                ),
+              ),
+            const Text(
+              'Please choose a bank to continue with payment.',
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.0),
             ),
             const SizedBox(
               height: 20.0,
@@ -146,8 +149,11 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
                 onChanged: (Bank? newValue) {
                   setState(() {
                     _currentBank = newValue;
+                    _ussdChargeRequestBody.setBank(newValue);
                     _controller.forward();
                   });
+
+                  _getUSSDDetails();
                 },
                 items: banks.map((Bank value) {
                   return DropdownMenuItem<Bank>(
@@ -157,67 +163,135 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
                 }).toList(),
               ),
             )),
-            ScaleTransition(
-              scale: _animation,
-              child: _currentBank == null
-                  ? container
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(
-                          height: 15.0,
-                        ),
-                        AccountField(onSaved: (String? value) => _account = BankAccount(_currentBank, value)),
-                        const SizedBox(
-                          height: 20.0,
-                        ),
-                        AccentButton(onPressed: _validateInputs, showProgress: _loading, text: 'Verify Account')
-                      ],
+            if (_isLoadingUSSDDetails == true)
+              const Padding(
+                padding: EdgeInsets.all(50.0),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryColor),
+                ),
+              ),
+            if (_isUSSDGenerated == true && _ussdCode != "")
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+                padding: const EdgeInsets.all(20),
+                color: AppColors.grey,
+                child: Center(
+                  child: Text(
+                    _ussdCode,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.0,
                     ),
+                  ),
+                ),
+              ),
+            const SizedBox(
+              height: 30.0,
             ),
+            if (_isUSSDGenerated == true)
+              AccentButton(
+                onPressed: confirmPayment,
+                showProgress: _loading,
+                text: 'Check Transaction Status',
+                color: AppColors.primaryColor,
+              )
           ],
         ),
       ),
     );
   }
 
-  void _validateInputs() {
-    FocusScope.of(context).requestFocus(FocusNode());
-    final FormState form = _formKey.currentState!;
-    if (form.validate()) {
-      form.save();
-      widget.charge.account = _account;
-      widget.onProcessingChange(true);
-      setState(() => _loading = true);
-      _chargeAccount();
-    } else {
-      setState(() => _autoValidate = AutovalidateMode.always);
+  void _getUSSDDetails() async {
+    if (_isLoadingUSSDDetails) {
+      return;
     }
-  }
 
-  void _chargeAccount() async {
-    final response =
-        await BankTransactionManager(charge: widget.charge, service: widget.service, context: context, publicKey: widget.publicKey).chargeBank();
+    TransactionApiResponse? response;
+    try {
+      setState(() {
+        _isLoadingUSSDDetails = true;
+        _isUSSDGenerated = false;
+        error = "";
+      });
 
-    if (!mounted) return;
+      response = await widget.service.createPayment(_ussdChargeRequestBody, widget.authKeys);
 
-    setState(() => _loading = false);
-    onResponse(response);
-  }
+      if (response.status == "CREATED") {
+        _ussdChargeRequestBody.setPaymentUrlReference(response.paymentUrlReference ?? widget.charge.reference ?? "");
+        response = await widget.service.chargeUSSD(_ussdChargeRequestBody, widget.authKeys);
 
-  Widget retryButton() {
-    banksMemo = null;
-    banksMemo = AsyncMemoizer();
-    _futureBanks = widget.service.fetchSupportedBanks();
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
-      child: AccentButton(onPressed: () => setState(() {}), showProgress: false, text: 'Display banks'),
-    );
+        if (response.status == "ONGOING") {
+          setState(() {
+            _ussdCode = response?.providerResponse ?? "";
+            _isUSSDGenerated = true;
+          });
+          widget.onProcessingChange(true);
+        }
+      } else if (response.status == "ONGOING") {
+        setState(() {
+          _ussdCode = response?.providerResponse ?? "";
+          _isUSSDGenerated = true;
+        });
+        widget.onProcessingChange(true);
+      }
+    } on CustomException catch (e) {
+      print(e.message);
+      setState(() {
+        error = e.message;
+      });
+    } catch (e) {
+      print(e);
+    }
+
+    setState(() {
+      _isLoadingUSSDDetails = false;
+    });
   }
 
   void _rebuild() {
     setState(() {
       // Rebuild in order to animate views.
+    });
+  }
+
+  void confirmPayment() async {
+    TransactionApiResponse? response;
+    try {
+      setState(() {
+        _loading = true;
+        error = "";
+      });
+
+      response = await widget.service.getPaymantDetails(widget.charge.reference!, widget.authKeys);
+      print("response.rawResponse");
+      print(response.rawResponse);
+      if (response.responseCode == "02") {
+        setState(() {
+          error = response?.responseDescription ?? "";
+        });
+      }
+      if (response.responseCode == "00") {
+        widget.onResponse(CheckoutResponse(
+          message: response.message ?? "",
+          reference: response.reference,
+          status: response.status ?? "",
+          serverResponse: response.rawResponse ?? {},
+          method: CheckoutMethod.USSD,
+        ));
+      }
+    } on CustomException catch (e) {
+      print(e);
+      setState(() {
+        error = e.message;
+      });
+    } catch (e) {
+      print(e);
+    }
+
+    setState(() {
+      _loading = false;
     });
   }
 }

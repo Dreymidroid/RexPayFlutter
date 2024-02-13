@@ -1,34 +1,24 @@
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:rexpay/rexpay.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:rexpay/src/core/api/service/custom_exception.dart';
 import 'package:rexpay/src/core/api/service/error_util.dart';
-import 'package:rexpay/src/core/common/rexpay.dart';
-
 import 'dart:async';
-import 'dart:convert' as convert;
-import 'dart:io';
-
 import 'package:dio/adapter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:rexpay/src/core/constants/constants.dart';
 
-mixin BaseApiService {
-  final Map<String, String> headers = {
-    HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded',
-    HttpHeaders.userAgentHeader: "RexpayPlugin.platformInfo.userAgent",
-    HttpHeaders.acceptHeader: 'application/json',
-    'X-Paystack-Build': "RexpayPlugin.platformInfo.paystackBuild",
-    'X-PAYSTACK-USER-AGENT': jsonEncode({'lang': Platform.isIOS ? 'objective-c' : 'kotlin'}),
-    'bindings_version': "RexpayPlugin.platformInfo.paystackBuild",
-    'X-FLUTTER-USER-AGENT': "RexpayPlugin.platformInfo.userAgent"
-  };
-  final String baseUrl = 'https://pgs-sandbox.globalaccelerex.com';
-}
+// mixin BaseApiService {
+//   final Map<String, String> headers = {
+//     HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded',
+//     HttpHeaders.userAgentHeader: "RexpayPlugin.platformInfo.userAgent",
+//     HttpHeaders.acceptHeader: 'application/json'
+//   };
+//   final String baseUrl = 'https://pgs-sandbox.globalaccelerex.com';
+// }
 
-mixin Services {
+mixin BaseApiService {
   static final Map<String, String> _requestHeaders = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -36,15 +26,10 @@ mixin Services {
 
   Future<Dio> getDio() async {
     Dio dio;
-    String baseUrl = "${BASE_URL}api/v1/";
-
     BaseOptions _options = BaseOptions(
-      baseUrl: baseUrl,
       headers: _requestHeaders,
-      // connectTimeout: 40000,
-      connectTimeout: 10000,
-      // receiveTimeout: 40000,
-      receiveTimeout: 10000,
+      connectTimeout: 40000,
+      receiveTimeout: 100000,
     );
 
     dio = Dio(_options);
@@ -53,22 +38,22 @@ mixin Services {
       return client;
     };
 
-    // dio.interceptors.add(
-    //   PrettyDioLogger(
-    //     requestHeader: true,
-    //     requestBody: true,
-    //     responseBody: true,
-    //     responseHeader: false,
-    //     error: true,
-    //     compact: true,
-    //     maxWidth: 10090,
-    //   ),
-    // );
+    dio.interceptors.add(
+      PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+        error: true,
+        compact: true,
+        maxWidth: 10090,
+      ),
+    );
 
     return dio;
   }
 
-  Future<Map<String, dynamic>> apiPostRequests(String endPoint, Map<String, dynamic> credentials, {Map<String, dynamic>? header}) async {
+  Future<Response> apiPostRequests(String endPoint, Map<String, dynamic> credentials, {Map<String, dynamic>? header}) async {
     try {
       header ??= {};
 
@@ -77,17 +62,18 @@ mixin Services {
           data: credentials,
           options: Options(headers: {
             ...header,
-          }));
-      return response.data;
+          },
+        ));
+      return response;
     } on DioError catch (e) {
-      debugPrint(e.toString());
-      print(e.toString());
+      // debugPrint(e.toString());
+      // print(e.toString());
 
       throw CustomException(DioErrorUtil.handleError(e));
     }
   }
 
-  Future<Map<String, dynamic>> apiGetRequests(String endPoint, {Map<String, dynamic>? header}) async {
+  Future<Response> apiGetRequests(String endPoint, {Map<String, dynamic>? header}) async {
     try {
       header ??= {};
       Dio dio = await getDio();
@@ -100,7 +86,7 @@ mixin Services {
       switch (response.statusCode) {
         case SERVER_OKAY:
           try {
-            return response.data;
+            return response;
           } catch (e) {
             throw PARSING_ERROR;
           }

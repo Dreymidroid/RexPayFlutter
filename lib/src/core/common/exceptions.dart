@@ -38,10 +38,6 @@ class InvalidEmailException extends RexpayException {
   InvalidEmailException(this.email) : super('$email  is not a valid email');
 }
 
-class PaystackSdkNotInitializedException extends RexpayException {
-  PaystackSdkNotInitializedException(String message) : super(message);
-}
-
 class ProcessingException extends ChargeException {
   ProcessingException() : super('A transaction is currently processing, please wait till it concludes before attempting a new charge.');
 }

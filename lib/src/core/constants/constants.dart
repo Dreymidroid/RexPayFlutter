@@ -11,4 +11,9 @@ const int ACCOUNT_ALREADY_EXISTS = 409;
 const int REDIRECT = 307;
 const String PARSING_ERROR = 'Parsing Error, Contact Devs';
 
-const String BASE_URL = "https://pgs-sandbox.globalaccelerex.com";
+const String TEST_BASE_URL = "https://pgs-sandbox.globalaccelerex.com";
+const String LIVE_PGS_BASE_URL = "https://pgs.globalaccelerex.com";
+const String LIVE_CPS_BASE_URL = "https://cps.globalaccelerex.com";
+
+// https://pgs.globalaccelerex.com/
+// https://cps.globalaccelerex.com

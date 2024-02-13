@@ -10,6 +10,8 @@ class Charge {
 
   /// The email of the customer
   String? email;
+  String? customerName;
+  String? callBackUrl;
   BankAccount? _account;
 
   /// Amount to pay in base currency. Must be a valid positive number
@@ -30,10 +32,6 @@ class Charge {
   String? currency;
   int? transactionCharge;
 
-  /// Who bears Paystack charges? [Bearer.Account] or [Bearer.SubAccount]
-  Bearer? bearer;
-
-  String? subAccount;
 
   Charge() {
     this._metadata = {};

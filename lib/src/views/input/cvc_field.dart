@@ -14,6 +14,7 @@ class CVCField extends BaseTextField {
           labelText: 'CVV',
           hintText: '123',
           onSaved: onSaved,
+          obscureText: true,
           validator: (String? value) => validateCVC(value, card),
           initialValue: card != null && card.cvc != null ? card.cvc.toString() : null,
           inputFormatters: [

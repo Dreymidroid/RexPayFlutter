@@ -4,6 +4,7 @@ class Strings {
   static const String invalidNumber = 'Invalid card number';
   static const String invalidExpiry = 'Invalid card expiry';
   static const String invalidCVC = 'Invalid cvv';
+  static const String invalidPin = 'Invalid pin';
   static const String invalidAcc =
       'Please enter a valid 10-digit NUBAN number ';
   static const String continue_ = 'Continue';

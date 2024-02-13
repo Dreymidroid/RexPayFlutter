@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:rexpay/src/views/input/base_field.dart';
 
 class OtpField extends TextFormField {
   OtpField({FormFieldSetter<String>? onSaved, required Color borderColor})
@@ -28,3 +30,26 @@ class OtpField extends TextFormField {
           ),
         );
 }
+
+class CardOTPField extends BaseTextField {
+  CardOTPField({
+    Key? key,
+    required FormFieldSetter<String> onSaved,
+    TextEditingController? controller,
+  }) : super(
+          key: key,
+          labelText: 'OTP',
+          hintText: 'Enter OTP',
+          onSaved: onSaved,
+          controller: controller,
+          validator: (String? value) => value!.isEmpty ? 'Enter OTP' : null,
+          initialValue: null,
+          obscureText: false,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            // new LengthLimitingTextInputFormatter(4),
+          ],
+        );
+}
+
+

@@ -21,18 +21,18 @@ class DioErrorUtil {
         case DioErrorType.response:
           if (error.response?.statusCode == 404)
             errorDescription =
-                error.response?.statusMessage ?? 'Unexpected error occurred';
+                error.response?.data["responseMessage"] ?? 'Unexpected error occurred';
           else if (error.response?.statusCode == 400) {
-            errorDescription = error.response?.statusMessage ?? 'Bad request';
+            errorDescription = error.response?.data["responseMessage"] ?? 'Bad request';
           } 
           else if (error.response?.statusCode == 422) {
-            errorDescription = error.response?.data["message"] ?? 'Bad request';
+            errorDescription = error.response?.data["responseMessage"] ?? 'Bad request';
           }
           else if (error.response?.statusCode == 401) {
-            errorDescription = error.response?.statusMessage ??
+            errorDescription = error.response?.data["responseMessage"] ??
                 'These credentials are wrong \nCheck and try again';
           } else if (error.response?.statusCode == 500) {
-            errorDescription = error.response?.statusMessage ??
+            errorDescription = error.response?.data["responseMessage"] ??
                 'Server is currently under maintenance, Try again later';
           } else {
             errorDescription =

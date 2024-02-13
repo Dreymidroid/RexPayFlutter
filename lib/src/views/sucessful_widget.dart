@@ -21,7 +21,7 @@ class _SuccessfulWidgetState extends State<SuccessfulWidget> with TickerProvider
   late AnimationController _opacityController;
   late Animation<double> _opacity;
 
-  static const int kStartValue = 4;
+  static const int kStartValue = 60;
   late AnimationController _countdownController;
   late Animation _countdownAnim;
 
@@ -74,7 +74,7 @@ class _SuccessfulWidgetState extends State<SuccessfulWidget> with TickerProvider
             sizedBox,
             new Image.asset(
               'assets/images/successful.png',
-              color: sceondaryColor,
+              color: Colors.green,
               width: 50.0,
               package: 'rexpay',
             ),
@@ -82,7 +82,7 @@ class _SuccessfulWidgetState extends State<SuccessfulWidget> with TickerProvider
             Text(
               'Payment Successful',
               style: TextStyle(
-                color: context.textTheme().headline6?.color,
+                color: Colors.green,
                 fontWeight: FontWeight.w500,
                 fontSize: 16.0,
               ),

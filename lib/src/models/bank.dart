@@ -1,8 +1,10 @@
 class Bank {
   String? name;
+  String? code;
+  String? display;
   int? id;
 
-  Bank(this.name, this.id);
+  Bank(this.name, this.id, this.code, this.display);
 
   @override
   String toString() {
@@ -13,8 +15,9 @@ class Bank {
 class BankAccount {
   Bank? bank;
   String? number;
+  String? accountName;
 
-  BankAccount(this.bank, this.number);
+  BankAccount(this.bank, this.number, this.accountName);
 
   bool isValid() {
     if (number == null || number!.length < 10) {

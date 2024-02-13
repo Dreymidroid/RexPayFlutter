@@ -2,64 +2,125 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:rexpay/src/core/api/model/transaction_api_response.dart';
+import 'package:rexpay/src/core/api/request/card_request_body.dart';
 import 'package:rexpay/src/core/api/service/base_service.dart';
 import 'package:rexpay/src/core/api/service/contracts/cards_service_contract.dart';
+import 'package:rexpay/src/core/api/service/custom_exception.dart';
+import 'package:rexpay/src/core/common/crypto.dart';
 import 'package:rexpay/src/core/common/exceptions.dart';
 import 'package:rexpay/src/core/common/my_strings.dart';
-import 'package:rexpay/src/core/common/extensions.dart';
-import 'package:http/http.dart' as http;
+import 'package:rexpay/src/core/constants/constants.dart';
+import 'package:rexpay/src/models/auth_keys.dart';
 
 class CardService with BaseApiService implements CardServiceContract {
   @override
-  Future<TransactionApiResponse> chargeCard(Map<String, String?> fields) async {
-    var url = '$baseUrl/charge/mobile_charge';
+  Future<TransactionApiResponse> chargeCard(CardRequestBody? credentials, AuthKeys authKeys) async {
+    try {
+      Map<String, dynamic> cre = await credentials!.toChargeCardJson(authKeys);
+      Response response = await apiPostRequests(
+        "${getBaseUrl(authKeys.mode)}cps/v1/chargeCard",
+        cre,
+        header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
+      );
 
-    http.Response response = await http.post(url.toUri(), body: fields, headers: headers);
-    var body = response.body;
+      var body = response.data;
 
-    var statusCode = response.statusCode;
+      var statusCode = response.statusCode;
 
-    switch (statusCode) {
-      case HttpStatus.ok:
-        Map<String, dynamic> responseBody = json.decode(body);
-        return TransactionApiResponse.fromMap(responseBody);
-      case HttpStatus.gatewayTimeout:
-        throw ChargeException('Gateway timeout error');
-      default:
-        throw ChargeException(Strings.unKnownResponse);
+      switch (statusCode) {
+        case HttpStatus.ok:
+          return TransactionApiResponse.fromChargeCardMap(await decryptCode(body["encryptedResponse"], authKeys));
+        case HttpStatus.gatewayTimeout:
+          throw ChargeException('Gateway timeout error');
+        default:
+          throw ChargeException(Strings.unKnownResponse);
+      }
+    } catch (e) {
+      rethrow;
     }
   }
 
-  @override
-  Future<TransactionApiResponse> validateCharge(Map<String, String?> fields) async {
-    var url = '$baseUrl/charge/validate';
+  Future<Map<String, dynamic>> decryptCode(String value, AuthKeys authKeys) async {
+    String deCrypt = await Crypto.decrypt(value, authKeys);
+    Map<String, dynamic> decMap = Map<String, dynamic>.from(jsonDecode(deCrypt));
+    return decMap;
+  }
 
-    http.Response response = await http.post(url.toUri(), body: fields, headers: headers);
-    var body = response.body;
+  @override
+  Future<TransactionApiResponse> authorizeCharge(CardRequestBody? credentials, AuthKeys authKeys) async {
+    Map<String, dynamic> cre = await credentials!.toAuthorizePaymentJson(authKeys);
+
+    Response response = await apiPostRequests(
+      "${getBaseUrl(authKeys.mode)}cps/v1/authorizeTransaction",
+      cre,
+      header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
+    );
+
+    var body = response.data;
 
     var statusCode = response.statusCode;
     if (statusCode == HttpStatus.ok) {
-      Map<String, dynamic> responseBody = json.decode(body);
-      return TransactionApiResponse.fromMap(responseBody);
+      Map<String, dynamic> responseBody = await decryptCode(body["encryptedResponse"], authKeys);
+      return TransactionApiResponse.fromAuthorizeCardMap(responseBody);
     } else {
-      throw CardException('validate charge transaction failed with '
+      throw CustomException('validate charge transaction failed with '
           'status code: $statusCode and response: $body');
     }
   }
 
-  Future<TransactionApiResponse> reQueryTransaction(String? trans) async {
-    var url = '$baseUrl/requery/$trans';
+  @override
+  Future<TransactionApiResponse> createPayment(CardRequestBody? credentials, AuthKeys authKeys) async {
+    try {
+      Response response = await apiPostRequests(
+        "${getBaseUrl(authKeys.mode,type: 'pgs')}pgs/payment/v2/createPayment",
+        credentials!.toInitialJson(),
+        header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
+      );
+      var body = response.data;
 
-    http.Response response = await http.get(url.toUri(), headers: headers);
-    var body = response.body;
-    var statusCode = response.statusCode;
-    if (statusCode == HttpStatus.ok) {
-      Map<String, dynamic> responseBody = json.decode(body);
-      return TransactionApiResponse.fromMap(responseBody);
-    } else {
-      throw ChargeException('requery transaction failed with status code: '
-          '$statusCode and response: $body');
+      var statusCode = response.statusCode;
+      if (statusCode == HttpStatus.ok) {
+        return TransactionApiResponse.fromCreateTransaction(body);
+      } else {
+        throw CustomException('Card transaction intiation failed with '
+            'status code: $statusCode and response: $body');
+      }
+    } catch (e) {
+      rethrow;
     }
+  }
+
+  @override
+  Future<TransactionApiResponse> insertPublicKey(AuthKeys authKeys) async {
+    try {
+      Response response = await apiPostRequests(
+        "${getBaseUrl(authKeys.mode, type: 'pgs')}pgs/clients/v1/publicKey",
+        {"clientId": authKeys.username, "publicKey": authKeys.publicKey},
+        header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
+      );
+      var body = response.data;
+
+      var statusCode = response.statusCode;
+      if (statusCode == HttpStatus.ok) {
+        return TransactionApiResponse.fromUploadeKeyMap({"status": "UPLOADED"});
+      } else {
+        throw CustomException('Key upload failed with '
+            'status code: $statusCode and response: $body');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  String getBaseUrl(Mode mode, {String type = 'cps'}) {
+    if (mode == Mode.live) {
+      if (type == 'pgs') {
+         return "$LIVE_PGS_BASE_URL/api/";
+      }
+      return "$LIVE_CPS_BASE_URL/api/";
+    }
+    return "$TEST_BASE_URL/api/";
   }
 }

@@ -16,6 +16,9 @@ class PaymentCard {
   /// Card CVV or CVC
   String? _cvc;
 
+  /// Card pin
+  String? _pin;
+
   /// Expiry month
   int? expiryMonth = 0;
 
@@ -101,8 +104,14 @@ class PaymentCard {
 
   String? get cvc => _cvc;
 
+  String? get pin => _pin;
+
   set cvc(String? value) {
     _cvc = CardUtils.getCleanedNumber(value);
+  }
+
+  set pin(String? value) {
+    _pin = CardUtils.getCleanedNumber(value);
   }
 
   PaymentCard(
@@ -182,8 +191,9 @@ class PaymentCard {
     }
 
     //check if formattedNumber is empty or card isn't a whole positive number or isn't Luhn-valid
-    if (StringUtils.isEmpty(formattedNumber) || !CardUtils.isWholeNumberPositive(cardNumber) || !_isValidLuhnNumber(cardNumber)) return false;
+    // if (StringUtils.isEmpty(formattedNumber) || !CardUtils.isWholeNumberPositive(cardNumber) || !_isValidLuhnNumber(cardNumber)) return false;
 
+   
     // check type lengths
     if (CardType.americanExpress == _type) {
       return formattedNumber.length == CardType.maxLengthAmericanExpress;

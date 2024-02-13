@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:rexpay/src/core/common/card_utils.dart';
 import 'package:rexpay/src/core/common/utils.dart';
+import 'package:rexpay/src/core/constants/colors.dart';
 import 'package:rexpay/src/models/card.dart';
 import 'package:rexpay/src/views/buttons.dart';
 import 'package:rexpay/src/views/input/cvc_field.dart';
 import 'package:rexpay/src/views/input/date_field.dart';
 import 'package:rexpay/src/views/input/number_field.dart';
+import 'package:rexpay/src/views/input/pin_field.dart';
 
 class CardInput extends StatefulWidget {
+  final bool loading;
   final String buttonText;
   final PaymentCard? card;
   final ValueChanged<PaymentCard?> onValidated;
@@ -17,6 +20,7 @@ class CardInput extends StatefulWidget {
     required this.buttonText,
     required this.card,
     required this.onValidated,
+    this.loading = false,
   }) : super(key: key);
 
   @override
@@ -57,13 +61,13 @@ class _CardInputState extends State<CardInput> {
       child: Column(
         children: <Widget>[
           NumberField(
-            key: Key("CardNumberKey"),
+            key: const Key("CardNumberKey"),
             controller: numberController,
             card: _card,
             onSaved: (String? value) => _card!.number = CardUtils.getCleanedNumber(value),
             suffix: getCardIcon(),
           ),
-          SizedBox(
+          const SizedBox(
             height: 15.0,
           ),
           Row(
@@ -72,7 +76,7 @@ class _CardInputState extends State<CardInput> {
             children: <Widget>[
               Flexible(
                 child: DateField(
-                  key: ValueKey("ExpiryKey"),
+                  key: const ValueKey("ExpiryKey"),
                   card: _card,
                   onSaved: (value) {
                     List<int> expiryDate = CardUtils.getExpiryDate(value);
@@ -81,10 +85,10 @@ class _CardInputState extends State<CardInput> {
                   },
                 ),
               ),
-              SizedBox(width: 15.0),
+              const SizedBox(width: 15.0),
               Flexible(
                   child: CVCField(
-                key: Key("CVVKey"),
+                key: const Key("CVVKey"),
                 card: _card,
                 onSaved: (value) {
                   _card!.cvc = CardUtils.getCleanedNumber(value);
@@ -92,10 +96,16 @@ class _CardInputState extends State<CardInput> {
               )),
             ],
           ),
-          SizedBox(
+          const SizedBox(
+            height: 15.0,
+          ),
+          PinField(
+            onSaved: (String? value) => _card!.pin = CardUtils.getCleanedNumber(value),
+          ),
+          const SizedBox(
             height: 20.0,
           ),
-          AccentButton(key: Key("PayButton"), onPressed: _validateInputs, text: widget.buttonText, showProgress: _validated),
+          AccentButton(key: const Key("PayButton"), onPressed: _validateInputs, text: widget.buttonText, showProgress: widget.loading, color: AppColors.primaryColor,),
         ],
       ),
     );
@@ -127,7 +137,7 @@ class _CardInputState extends State<CardInput> {
     String img = "";
     var defaultIcon = Icon(
       Icons.credit_card,
-      key: Key("DefaultIssuerIcon"),
+      key: const Key("DefaultIssuerIcon"),
       size: 15.0,
       color: Colors.grey[600],
     );
@@ -160,7 +170,7 @@ class _CardInputState extends State<CardInput> {
     if (img.isNotEmpty) {
       widget = Image.asset(
         'assets/images/$img',
-        key: Key("IssuerIcon"),
+        key: const Key("IssuerIcon"),
         height: 15,
         width: 30,
         package: 'rexpay',

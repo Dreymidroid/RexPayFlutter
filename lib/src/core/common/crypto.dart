@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:rexpay/src/core/common/utils.dart';
+import 'package:openpgp/openpgp.dart';
+import 'package:rexpay/src/models/auth_keys.dart';
+
 
 class Crypto {
-  static Future<String> encrypt(String data) async {
+  static Future<String> encrypt(String data, String publicKey) async {
     var completer = Completer<String>();
 
     try {
-      String? result = await Utils.methodChannel.invokeMethod('getEncryptedData', {"stringData": data});
-      completer.complete(result);
+      var encrypted = await OpenPGP.encrypt(data, publicKey);
+
+      completer.complete(encrypted);
     } on PlatformException catch (e) {
       completer.completeError(e);
     }
@@ -16,8 +19,19 @@ class Crypto {
     return completer.future;
   }
 
-  static Future<String> decrypt(String data) async {
-    // Well, let's hope we'll never decrypt
-    throw UnimplementedError('Decrypt is not supported for now');
+  static Future<String> decrypt(String data, AuthKeys authKeys) async {
+    try {
+      final message = await OpenPGP.decrypt(data, authKeys.privateKey, authKeys.passPhrase);
+
+      return message;
+    } on OpenPGPException catch (e) {
+      print(e.cause);
+      // Well, let's hope we'll never decrypt
+      throw UnimplementedError('Error Decrypting data');
+    }
+    catch (e){
+      throw UnimplementedError('Error Decrypting data');
+    }
   }
 }
+

@@ -4,19 +4,19 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:rexpay/src/core/api/model/transaction_api_response.dart';
-import 'package:rexpay/src/core/api/request/bank_charge_request_body.dart';
+import 'package:rexpay/src/core/api/request/ussd_request_body.dart';
 import 'package:rexpay/src/core/api/service/base_service.dart';
-import 'package:rexpay/src/core/api/service/contracts/banks_service_contract.dart';
+import 'package:rexpay/src/core/api/service/contracts/ussd_services_contract.dart';
 import 'package:rexpay/src/core/common/exceptions.dart';
 import 'package:rexpay/src/core/constants/constants.dart';
 import 'package:rexpay/src/models/auth_keys.dart';
+import 'package:rexpay/src/models/bank.dart';
 
-class BankService with BaseApiService implements BankServiceContract {
+class USSDService with BaseApiService implements USSDServiceContract {
   @override
-  Future<TransactionApiResponse> getTransactionStatus(String transRef, AuthKeys authKeys) async {
-    Response response = await apiPostRequests(
-      "${getBaseUrl(authKeys.mode)}cps/v1/getTransactionStatus",
-      {"transactionReference": transRef},
+  Future<TransactionApiResponse> getPaymantDetails(String transRef, AuthKeys authKeys) async {
+    Response response = await apiGetRequests(
+      "${getBaseUrl(authKeys.mode, type: 'pgs')}pgs/payment/v1/getPaymentDetails/$transRef",
       header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
     );
 
@@ -24,19 +24,19 @@ class BankService with BaseApiService implements BankServiceContract {
     var statusCode = response.statusCode;
 
     if (statusCode == HttpStatus.ok) {
-      return TransactionApiResponse.fromGetTransactionStatus(body!);
+      return TransactionApiResponse.fromGetUSSDTransactionStatus(body!);
     } else {
-      throw ChargeException('Bank transaction failed with '
+      throw CardException('Bank transaction failed with '
           'status code: $statusCode and response: $body');
     }
   }
 
   @override
-  Future<TransactionApiResponse> chargeBank(BankChargeRequestBody? credentials, AuthKeys authKeys) async {
+  Future<TransactionApiResponse> chargeUSSD(USSDChargeRequestBody? credentials, AuthKeys authKeys) async {
     try {
       Response response = await apiPostRequests(
-        "${getBaseUrl(authKeys.mode)}cps/v1/initiateBankTransfer",
-        credentials!.toChargeBankJson(),
+        "${getBaseUrl(authKeys.mode, type: 'pgs')}pgs/payment/v1/makePayment",
+        credentials!.toChargeUSSDJson(),
         header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
       );
 
@@ -44,9 +44,9 @@ class BankService with BaseApiService implements BankServiceContract {
       var statusCode = response.statusCode;
 
       if (statusCode == HttpStatus.ok) {
-        return TransactionApiResponse.fromChargeCardMap(body!);
+        return TransactionApiResponse.fromCreateUSSDPayment(body!);
       } else {
-        throw ChargeException('Bank transaction failed with '
+        throw CardException('Bank transaction failed with '
             'status code: $statusCode and response: $body');
       }
     } catch (e) {
@@ -55,7 +55,7 @@ class BankService with BaseApiService implements BankServiceContract {
   }
 
   @override
-  Future<TransactionApiResponse> createPayment(BankChargeRequestBody? credentials, AuthKeys authKeys) async {
+  Future<TransactionApiResponse> createPayment(USSDChargeRequestBody? credentials, AuthKeys authKeys) async {
     try {
       Response response = await apiPostRequests(
         "${getBaseUrl(authKeys.mode, type: 'pgs')}pgs/payment/v2/createPayment",
@@ -67,9 +67,32 @@ class BankService with BaseApiService implements BankServiceContract {
       var statusCode = response.statusCode;
 
       if (statusCode == HttpStatus.ok) {
-        return TransactionApiResponse.fromCreateTransaction(body!);
+        return TransactionApiResponse.fromUSSDCreateTransaction(body!);
       } else {
-        throw ChargeException('Bank transaction failed with '
+        throw CardException('Bank transaction failed with '
+            'status code: $statusCode and response: $body');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Bank>?> fetchSupportedBanks(USSDChargeRequestBody? credentials, AuthKeys authKeys) async {
+    try {
+      Response response = await apiPostRequests(
+        "${getBaseUrl(authKeys.mode, type: 'pgs')}pgs/payment/v2/createPayment",
+        credentials!.toInitialJson(),
+        header: {'authorization': 'Basic ${base64Encode(utf8.encode('${authKeys.username}:${authKeys.password}'))}'},
+      );
+
+      var body = response.data;
+      var statusCode = response.statusCode;
+
+      if (statusCode == HttpStatus.ok) {
+        return [];
+      } else {
+        throw CardException('Bank transaction failed with '
             'status code: $statusCode and response: $body');
       }
     } catch (e) {

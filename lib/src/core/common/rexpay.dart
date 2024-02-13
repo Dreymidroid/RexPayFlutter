@@ -1,107 +1,70 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:rexpay/rexpay.dart';
 import 'package:rexpay/src/core/api/service/bank_service.dart';
 import 'package:rexpay/src/core/api/service/card_service.dart';
+import 'package:rexpay/src/core/api/service/ussd_services.dart';
 import 'package:rexpay/src/core/common/exceptions.dart';
 import 'package:rexpay/src/core/common/my_strings.dart';
-import 'package:rexpay/src/core/common/platform_info.dart';
 import 'package:rexpay/src/core/common/string_utils.dart';
-import 'package:rexpay/src/core/common/utils.dart';
 import 'package:rexpay/src/models/card.dart';
 import 'package:rexpay/src/models/charge.dart';
 import 'package:rexpay/src/models/checkout_response.dart';
-import 'package:rexpay/src/transaction/card_transaction_manager.dart';
 import 'package:rexpay/src/views/checkout/checkout_widget.dart';
 
 class RexpayPlugin {
-  String _username = "";
-  String _password = "";
-  String _publicKey = "";
-  String _privateKey = "";
-  String _passPhrase = "";
+  late AuthKeys _authKeys;
 
   /// Initialize the Rexpay object. It should be called as early as possible
   /// (preferably in initState() of the Widget.
   ///
-  /// [username] - your rexpay username. This is mandatory
-  /// [password] - your rexpay password. This is mandatory
-  /// [publicKey] - your rexpay public key. This is mandatory
-  /// [privateKey] - your rexpay private key. This is mandatory
-  /// [passPhrase] - your rexpay passphrase. This is mandatory
+  /// [authKeys] - your rexpay public key, private key, username, password and passphrase. This is mandatory
   ///
   /// use [checkout] and you want this plugin to initialize the transaction for you.
   /// Please check [checkout] for more information
   ///
-  initialize({required String publicKey, required String privateKey, required String username, required String password, required String passPhrase}) async {
+  initialize({required AuthKeys authKeys}) async {
     assert(() {
-      if (publicKey.isEmpty) {
-        throw RexpayException('PublicKey cannot be null or empty');
+      if (authKeys.publicKey.isEmpty) {
+        throw RexpayException('authKeys cannot be null or empty');
       }
 
-      if (privateKey.isEmpty) {
+      if (authKeys.privateKey.isEmpty) {
         throw RexpayException('PrivateKey cannot be null or empty');
       }
 
-      if (username.isEmpty) {
+      if (authKeys.username.isEmpty) {
         throw RexpayException('Username cannot be null or empty');
       }
 
-      if (password.isEmpty) {
+      if (authKeys.password.isEmpty) {
         throw RexpayException('Password cannot be null or empty');
       }
 
-      if (passPhrase.isEmpty) {
+      if (authKeys.passPhrase.isEmpty) {
+        throw RexpayException('Passphrase cannot be null or empty');
+      }
+
+      if (authKeys.rexPayPublicKey.isEmpty) {
         throw RexpayException('Passphrase cannot be null or empty');
       }
 
       return true;
     }());
 
-    _publicKey = publicKey;
-    _privateKey = privateKey;
-    _username = username;
-    _password = password;
-    _passPhrase = passPhrase;
+    _authKeys = authKeys;
   }
 
   dispose() {
-    _publicKey = "";
-    _privateKey = "";
-    _username = "";
-    _password = "";
-    _passPhrase = "";
+    _authKeys = AuthKeys(rexPayPublicKey: "", publicKey: "", privateKey: "", username: "", password: "", passPhrase: "");
+   
   }
 
-
-  String get publicKey {
-    return _publicKey;
+  AuthKeys get authKeys {
+    return _authKeys;
   }
 
-  String get privateKey {
-    return _privateKey;
-  }
-
-  String get password {
-    return _password;
-  }
-
-  String get username {
-    return _username;
-  }
-
-  String get passPhrase {
-    return _passPhrase;
-  }
-
-
-  // void _performChecks() {
-  //   //check for null value
-  //   if (_publicKey.isEmpty || !_publicKey.startsWith("pk_")) {
-  //     throw new AuthenticationException(Utils.getKeyErrorMsg('public'));
-  //   }
-  // }
 
   /// Make payment by charging the user's card
   ///
@@ -109,11 +72,11 @@ class RexpayPlugin {
   ///
   /// [charge] - the charge object.
 
-  Future<CheckoutResponse> chargeCard(BuildContext context, {required Charge charge}) {
-    // _performChecks();
+  // Future<CheckoutResponse> chargeCard(BuildContext context, {required Charge charge}) {
+  //   // _performChecks();
 
-    return _Rexpay(publicKey, privateKey, username, password, passPhrase).chargeCard(context: context, charge: charge);
-  }
+  //   return _Rexpay(authKeys).chargeCard(context: context, charge: charge);
+  // }
 
   /// Make payment using Rexpay's checkout form. The plugin will handle the whole
   /// processes involved.
@@ -158,7 +121,7 @@ class RexpayPlugin {
     bool hideEmail = false,
     bool hideAmount = false,
   }) async {
-    return _Rexpay(publicKey, privateKey, username, password, passPhrase).checkout(
+    return _Rexpay(authKeys).checkout(
       context,
       charge: charge,
       method: method,
@@ -171,17 +134,9 @@ class RexpayPlugin {
 }
 
 class _Rexpay {
-  final String publicKey;
-  final String privateKey;
-  final String username;
-  final String password;
-  final String passPhrase;
+  final AuthKeys authKeys;
 
-  _Rexpay(this.publicKey, this.privateKey, this.username, this.password, this.passPhrase);
-
-  Future<CheckoutResponse> chargeCard({required BuildContext context, required Charge charge}) {
-    return CardTransactionManager(service: CardService(), charge: charge, context: context, publicKey: publicKey).chargeCard();
-  }
+  _Rexpay(this.authKeys);
 
   Future<CheckoutResponse> checkout(
     BuildContext context, {
@@ -215,9 +170,10 @@ class _Rexpay {
       barrierDismissible: false,
       context: context,
       builder: (BuildContext context) => CheckoutWidget(
-        publicKey: publicKey,
+        authKeys: authKeys,
         bankService: BankService(),
         cardsService: CardService(),
+        ussdSService: USSDService(),
         method: method,
         charge: charge,
         fullscreen: fullscreen,
