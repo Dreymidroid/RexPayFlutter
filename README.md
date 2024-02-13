@@ -49,16 +49,7 @@ class _PaymentPageState extends State<PaymentPage> {
 No other configuration required&mdash;the plugin works out of the box.
 
 ## :heavy_dollar_sign: Making Payments
-There are two ways of making payment with the plugin.
-1.  **Checkout**: This is the easy way; as the plugin handles all the
-    processes involved in making a payment (except transaction
-    initialization and verification which should be done from your
-    backend).
-2.  **Charge Card**: This is a longer approach; you handle all callbacks
-    and UI states.
-
-### 1. :star2: Checkout (Recommended)
- You initialize a charge object with an amount, customer email  & reference.
+To make payment, You initialize a charge object with an amount, customer email  & reference.
  
 
  ```dart
