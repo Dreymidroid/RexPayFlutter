@@ -38,17 +38,17 @@ mixin BaseApiService {
       return client;
     };
 
-    dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseBody: true,
-        responseHeader: false,
-        error: true,
-        compact: true,
-        maxWidth: 10090,
-      ),
-    );
+    // dio.interceptors.add(
+    //   PrettyDioLogger(
+    //     requestHeader: true,
+    //     requestBody: true,
+    //     responseBody: true,
+    //     responseHeader: false,
+    //     error: true,
+    //     compact: true,
+    //     maxWidth: 10090,
+    //   ),
+    // );
 
     return dio;
   }

@@ -136,6 +136,7 @@ class TransactionApiResponse extends ApiResponse {
     transactionReference = map['transactionRef'];
     responseCode = map['responseCode'];
     paymentId = map['paymentId'];
+    rawResponse = map;
   }
 
   TransactionApiResponse.fromUploadeKeyMap(Map<String, dynamic> map) {

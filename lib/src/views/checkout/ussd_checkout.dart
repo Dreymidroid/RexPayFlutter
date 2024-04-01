@@ -265,8 +265,8 @@ class _USSDCheckoutState extends BaseCheckoutMethodState<USSDCheckout> {
       });
 
       response = await widget.service.getPaymantDetails(widget.charge.reference!, widget.authKeys);
-      print("response.rawResponse");
-      print(response.rawResponse);
+      // print("response.rawResponse");
+      // print(response.rawResponse);
       if (response.responseCode == "02") {
         setState(() {
           error = response?.responseDescription ?? "";

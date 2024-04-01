@@ -144,9 +144,7 @@ class _CardCheckoutState extends BaseCheckoutMethodState<CardCheckout> {
             padding: EdgeInsets.symmetric(vertical: 20),
             child: CardOTPField(
               controller: otpController,
-              onSaved: (String? value) {
-               
-              },
+              onSaved: (String? value) {},
             ),
           ),
           const SizedBox(height: 10),
@@ -191,7 +189,14 @@ class _CardCheckoutState extends BaseCheckoutMethodState<CardCheckout> {
 
       if (res.responseCode == "00") {
         onResponse(
-            CheckoutResponse(message: "Payment Successful", reference: widget.charge.reference, status: "SUCCESS", method: CheckoutMethod.card, serverResponse: res.rawResponse ?? {}));
+          CheckoutResponse(
+            message: "Payment Successful",
+            reference: widget.charge.reference,
+            status: "SUCCESS",
+            method: CheckoutMethod.card,
+            serverResponse: res.rawResponse ?? {},
+          ),
+        );
       }
     } on CustomException catch (e) {
       setState(() {

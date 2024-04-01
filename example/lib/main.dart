@@ -93,6 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
       specialsCount: 2,
       specials: 'a',
     );
+    print("here");
 
     Charge charge = Charge()
       ..amount = 10000
