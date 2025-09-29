@@ -88,7 +88,7 @@ class _SuccessfulWidgetState extends State<ErrorWidget> with TickerProviderState
             ),
             Text(widget.message,
                 style: TextStyle(
-                  color: context.textTheme().headline6?.color,
+                  color: context.textTheme().headlineMedium?.color,
                   fontWeight: FontWeight.normal,
                   fontSize: 14.0,
                 )),

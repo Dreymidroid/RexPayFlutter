@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dio/io.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:rexpay/src/core/api/service/custom_exception.dart';
 import 'package:rexpay/src/core/api/service/error_util.dart';
 import 'dart:async';
-import 'package:dio/adapter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:rexpay/src/core/constants/constants.dart';
@@ -28,13 +28,18 @@ mixin BaseApiService {
     Dio dio;
     BaseOptions _options = BaseOptions(
       headers: _requestHeaders,
-      connectTimeout: 40000,
-      receiveTimeout: 100000,
+      // connectTimeout: 40000,
+      // receiveTimeout: 100000,
+      connectTimeout: const Duration(milliseconds: 40000),
+      receiveTimeout: const Duration(milliseconds: 100000),
+      sendTimeout: const Duration(seconds: 30),
     );
 
     dio = Dio(_options);
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
+        (HttpClient client) {
+      client.badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
       return client;
     };
 
@@ -53,27 +58,31 @@ mixin BaseApiService {
     return dio;
   }
 
-  Future<Response> apiPostRequests(String endPoint, Map<String, dynamic> credentials, {Map<String, dynamic>? header}) async {
+  Future<Response> apiPostRequests(
+      String endPoint, Map<String, dynamic> credentials,
+      {Map<String, dynamic>? header}) async {
     try {
       header ??= {};
 
       Dio dio = await getDio();
       final Response response = await dio.post(endPoint,
           data: credentials,
-          options: Options(headers: {
-            ...header,
-          },
-        ));
+          options: Options(
+            headers: {
+              ...header,
+            },
+          ));
       return response;
     } on DioError catch (e) {
       // debugPrint(e.toString());
       // print(e.toString());
 
-      throw CustomException(DioErrorUtil.handleError(e));
+      throw CustomException(e.toString());
     }
   }
 
-  Future<Response> apiGetRequests(String endPoint, {Map<String, dynamic>? header}) async {
+  Future<Response> apiGetRequests(String endPoint,
+      {Map<String, dynamic>? header}) async {
     try {
       header ??= {};
       Dio dio = await getDio();
@@ -101,7 +110,7 @@ mixin BaseApiService {
           throw DioErrorUtil.normalizeError(response.data);
       }
     } on DioError catch (e) {
-      throw CustomException(DioErrorUtil.handleError(e));
+      throw CustomException(e.toString());
     }
   }
 }

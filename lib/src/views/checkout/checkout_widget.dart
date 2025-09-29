@@ -179,14 +179,14 @@ class _CheckoutWidgetState extends BaseState<CheckoutWidget> with TickerProvider
             children: <Widget>[
               Text(
                 'Pay',
-                style: TextStyle(fontSize: 14.0, color: context.textTheme().headline1?.color),
+                style: TextStyle(fontSize: 14.0, color: context.textTheme().headlineMedium?.color),
               ),
               const SizedBox(
                 width: 5.0,
               ),
               Flexible(
                   child: Text(Utils.formatAmount(_charge.amount),
-                      style: TextStyle(fontSize: 15.0, color: context.textTheme().headline6?.color, fontWeight: FontWeight.bold)))
+                      style: TextStyle(fontSize: 15.0, color: context.textTheme().headlineMedium?.color, fontWeight: FontWeight.bold)))
             ],
           )
       ],
