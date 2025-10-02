@@ -43,17 +43,17 @@ mixin BaseApiService {
       return client;
     };
 
-    // dio.interceptors.add(
-    //   PrettyDioLogger(
-    //     requestHeader: true,
-    //     requestBody: true,
-    //     responseBody: true,
-    //     responseHeader: false,
-    //     error: true,
-    //     compact: true,
-    //     maxWidth: 10090,
-    //   ),
-    // );
+    dio.interceptors.add(
+      PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+        error: true,
+        compact: true,
+        maxWidth: 10090,
+      ),
+    );
 
     return dio;
   }
@@ -73,11 +73,11 @@ mixin BaseApiService {
             },
           ));
       return response;
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       // debugPrint(e.toString());
       // print(e.toString());
 
-      throw CustomException(e.toString());
+      throw CustomException(DioErrorUtil.handleError(e));
     }
   }
 
@@ -109,8 +109,8 @@ mixin BaseApiService {
         default:
           throw DioErrorUtil.normalizeError(response.data);
       }
-    } on DioError catch (e) {
-      throw CustomException(e.toString());
+    } on DioException catch (e) {
+      throw CustomException(DioErrorUtil.handleError(e));
     }
   }
 }
