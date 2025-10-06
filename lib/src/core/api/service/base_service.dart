@@ -1,12 +1,9 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:dio/io.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:rexpay/src/core/api/service/custom_exception.dart';
 import 'package:rexpay/src/core/api/service/error_util.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:rexpay/src/core/constants/constants.dart';
 
 // mixin BaseApiService {
@@ -36,12 +33,8 @@ mixin BaseApiService {
     );
 
     dio = Dio(_options);
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
-        (HttpClient client) {
-      client.badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-      return client;
-    };
+    (dio.httpClientAdapter as IOHttpClientAdapter).validateCertificate =
+        (_, __, ___) => true;
 
     dio.interceptors.add(
       PrettyDioLogger(

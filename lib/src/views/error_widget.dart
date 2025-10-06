@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:rexpay/src/core/common/utils.dart';
 import 'package:rexpay/src/core/constants/colors.dart';
 import 'package:rexpay/src/views/animated_widget.dart';
 import 'package:rexpay/src/views/common/extensions.dart';

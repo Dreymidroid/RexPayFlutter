@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart' hide ErrorWidget;
 import 'package:rexpay/rexpay.dart';
@@ -54,7 +53,7 @@ class CheckoutWidget extends StatefulWidget {
 }
 
 class _CheckoutWidgetState extends BaseState<CheckoutWidget> with TickerProviderStateMixin {
-  static const tabBorderRadius = BorderRadius.all(Radius.circular(4.0));
+  // static const tabBorderRadius = BorderRadius.all(Radius.circular(4.0));
   final Charge _charge;
   int? _currentIndex = 0;
   var _showTabs = true;
